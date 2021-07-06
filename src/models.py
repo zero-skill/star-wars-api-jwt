@@ -1,4 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import safe_str_cmp
+
 db=SQLAlchemy()
 class User(db.Model):
     __tablename__= 'user'
@@ -6,7 +8,7 @@ class User(db.Model):
     password = db.Column(db.String(250),nullable=False)
     email = db.Column(db.String(250),nullable=False)
     username = db.Column(db.String(250), nullable=False)
-
+        
     def serialize(self):
         return {
             "id": self.id,

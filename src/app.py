@@ -1,8 +1,7 @@
 from flask import Flask, json, jsonify, request
-from sqlalchemy.sql.functions import current_user
 from flask_migrate import Migrate
 from models import Character, Planet, db, User
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
+from flask_jwt_extended import create_access_token,  jwt_required, get_jwt_identity, JWTManager
 app = Flask(__name__)
 app.config['DEBUG']=True
 app.config['ENV']='development'
@@ -13,25 +12,30 @@ app.config['JWT_SECRET_KEY'] = "ULTRA-SECRET"
 jwt=JWTManager(app)
 db.init_app(app)
 Migrate(app,db)
-@app.route('/',methods=['GET'])
-def hworld():
-    return """hello world"""
+
+
 
 @app.route("/login", methods=["POST"])
 def login():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
-    if username != "test" or password != "test":
+    user = User.query.filter_by(username=username, password=password).one_or_none()
+    if user is None:
         return jsonify({"msg": "Bad username or password"}), 401
 
-    access_token = create_access_token(identity=username)
-    return jsonify(access_token=access_token)
+    access_token = create_access_token(identity=user.id)
+    return jsonify({"token" :access_token, "user_id" : user.id})
 
 @app.route("/protected", methods=["GET"])
 @jwt_required()
 def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    return jsonify(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+    ),200
 
 
 @app.route('/users', methods=['GET','POST'])
