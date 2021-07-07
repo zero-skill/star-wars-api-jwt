@@ -1,6 +1,6 @@
 from flask import Flask, json, jsonify, request
 from flask_migrate import Migrate
-from models import Character, Planet, db, User
+from models import Character, Favorite_Characters, Favorite_Planets, Planet, db, User
 from flask_jwt_extended import create_access_token,  jwt_required, get_jwt_identity, JWTManager
 app = Flask(__name__)
 app.config['DEBUG']=True
@@ -37,7 +37,72 @@ def protected():
         username=user.username,
     ),200
 
+#GET USER FAVORITED
+@app.route("/users/favorites",methods=["GET"])
+@jwt_required()
+def user_favorites():
+    current_user=get_jwt_identity()
+    favorites_people = Favorite_Characters.query.filter_by(user_id=current_user).all()
+    favorite_people = list(map(lambda character: character.serialize(),favorites_people))
+    favorites_planets = Favorite_Planets.query.filter_by(user_id=current_user).all()
+    favorite_planet = list(map(lambda planet: planet.serialize(),favorites_planets))
+    return jsonify({"favorite_people":favorite_people, "favorite_planets":favorite_planet}), 200
 
+
+#POST, DELETE FAVORITE PlANETS
+@app.route("/favorite/planet/<int:planet_id>",methods=["POST","DELETE"])
+@jwt_required()
+def favorite_planet(planet_id):
+    current_user = get_jwt_identity()
+    if request.method == 'POST':
+        planet = Planet.query.get(planet_id)
+        #favorite_planet = Favorite_Planets.query.filter_by(user_id=current_user,planet_id=planet_id).one_or_none()
+        if planet is None:
+            return jsonify({"msg": "Planet not founded"}),403
+        #if favorite_planet is None:
+        #    return jsonify({"msg": "Planet already exists in your favorites"}), 406
+        user_id = request.json.get('user_id', current_user)
+        planet_id = request.json.get('planet_id', planet_id)
+        favorite_planet = Favorite_Planets()
+        favorite_planet.user_id=user_id
+        favorite_planet.planet_id=planet_id
+        favorite_planet.save()
+        return jsonify(favorite_planet.serialize()),201
+    if request.method == 'DELETE':
+        favorite_planet = Favorite_Planets.query.filter_by(user_id=current_user,planet_id=planet_id).one_or_none()
+        if favorite_planet is None:
+            return jsonify({"msg": "Character not founded"}), 403
+        favorite_planet.delete()
+        return jsonify({"success": "Character eliminated from your favorites"}), 201
+
+#POST, DELETE FAVORITE PEOPLE
+@app.route("/favorite/people/<int:people_id>", methods=["POST","DELETE"])
+@jwt_required()
+def favorite_people(people_id):
+    current_user = get_jwt_identity()
+    if request.method == 'POST':
+        character = Character.query.get(people_id)
+        #favorite_character = Favorite_Characters.query.filter_by(user_id=current_user,character_id=people_id).one_or_none()
+        if character is None:
+            return jsonify({"msg": "Character not founded"}), 403
+        #if favorite_character is None:
+        #    return jsonify({"msg": "Character already exists in your favorites"}), 406
+        user_id = request.json.get('user_id', current_user)
+        character_id = request.json.get('character_id', people_id)
+        favorite_character = Favorite_Characters()
+        favorite_character.user_id= user_id
+        favorite_character.character_id=character_id
+
+        favorite_character.save()
+        return jsonify(favorite_character.serialize()),201
+    if request.method=='DELETE':
+        favorite_character = Favorite_Characters.query.filter_by(user_id=current_user,character_id=people_id).one_or_none()
+        if favorite_character is None:
+            return jsonify({"msg": "Character not founded"}), 403
+        favorite_character.delete()
+        return jsonify({"success": "Character eliminated from your favorites"}), 201
+
+#GET, POST, PUT, DELETE USERS
 @app.route('/users', methods=['GET','POST'])
 @app.route('/users/<int:id>',methods=['GET','PUT','DELETE'])
 def users(id=None):
@@ -63,6 +128,8 @@ def users(id=None):
         user = User.query.get(id)
         user.delete()
         return jsonify({"success":"user deleted"}) ,200
+
+#GET, POST, PUT, DELETE PEOPLE
 @app.route('/people',methods=['GET','POST'])
 @app.route('/people/<int:id>',methods=['GET','PUT','DELETE'])
 def people(id=None):
@@ -110,6 +177,7 @@ def people(id=None):
         character.delete()
         return jsonify({"success":"character deleted"}),200
 
+#GET, POST, PUT, DELETE PLANETS
 @app.route('/planets', methods=['GET','POST'])
 @app.route('/planets/<int:id>',methods=['GET','PUT','DELETE'])
 def planets(id=None):
