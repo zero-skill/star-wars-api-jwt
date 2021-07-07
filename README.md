@@ -64,7 +64,7 @@
             "username": "some username",
             "password": "some password"
         }
-    ### The response must contain:
+    ### The response contain:
         {
             "token": "TOKEN_JWT",
             "user_id": "current user_id"
