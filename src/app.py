@@ -37,6 +37,18 @@ def protected():
         username=user.username,
     ),200
 
+#GET USER FAVORITED
+@app.route("/users/favorites",methods=["GET"])
+@jwt_required()
+def user_favorites():
+    current_user=get_jwt_identity()
+    favorites_people = Favorite_Characters.query.filter_by(user_id=current_user).all()
+    favorite_people = list(map(lambda character: character.serialize(),favorites_people))
+    favorites_planets = Favorite_Planets.query.filter_by(user_id=current_user).all()
+    favorite_planet = list(map(lambda planet: planet.serialize(),favorites_planets))
+    return jsonify({"favorite_people":favorite_people, "favorite_planets":favorite_planet}), 200
+
+
 #POST, DELETE FAVORITE PlANETS
 @app.route("/favorite/planet/<int:planet_id>",methods=["POST","DELETE"])
 @jwt_required()
